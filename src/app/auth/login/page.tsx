@@ -36,29 +36,6 @@ export default function LoginPage() {
     }
   };
 
-  const demoLogin = async (email: string, pass: string) => {
-    setForm({ email, password: pass });
-    setLoading(true);
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password: pass }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      toast.success(`Logged in as ${data.user.role.toLowerCase()}`);
-      const role = data.user.role;
-      if (role === "ADMIN" || role === "SUPER_ADMIN") router.push("/admin");
-      else if (role === "TEACHER") router.push("/teacher/dashboard");
-      else router.push("/student/dashboard");
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-ink-50 flex">
       {/* Left panel */}
@@ -148,29 +125,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Demo accounts */}
-          <div className="mt-6">
-            <p className="text-xs font-body font-semibold text-ink-400 uppercase tracking-wide mb-3">
-              Demo accounts
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { label: "Student", email: "student@iitd.ac.in", pass: "student123", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-                { label: "Teacher", email: "prof.sharma@iitd.ac.in", pass: "teacher123", color: "bg-blue-50 text-blue-700 border-blue-200" },
-                { label: "Admin", email: "admin@iitd.ac.in", pass: "admin123", color: "bg-purple-50 text-purple-700 border-purple-200" },
-                { label: "Super Admin", email: "superadmin@edushare.com", pass: "superadmin123", color: "bg-orange-50 text-orange-700 border-orange-200" },
-              ].map((d) => (
-                <button
-                  key={d.label}
-                  onClick={() => demoLogin(d.email, d.pass)}
-                  disabled={loading}
-                  className={`text-xs font-body font-semibold px-3 py-2.5 rounded-xl border transition-all hover:scale-[1.02] ${d.color}`}
-                >
-                  {d.label}
-                </button>
-              ))}
-            </div>
-          </div>
+
         </div>
       </div>
     </div>
