@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: edushare_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: edushare
+      POSTGRES_PASSWORD: edushare_pass
+      POSTGRES_DB: edushare_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U edushare -d edushare_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: edushare_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgresql://edushare:edushare_pass@postgres:5432/edushare_db"
+      JWT_SECRET: "change-this-in-production-minimum-32-characters-long"
+      JWT_EXPIRES_IN: "7d"
+      NEXT_PUBLIC_APP_URL: "http://localhost:3000"
+      NEXT_PUBLIC_APP_NAME: "EduShare"
+      UPLOAD_DIR: "/app/public/uploads"
+      MAX_FILE_SIZE: "10485760"
+      NODE_ENV: "production"
+    volumes:
+      - uploads_data:/app/public/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  uploads_data:

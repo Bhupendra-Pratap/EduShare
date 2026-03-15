@@ -1,0 +1,46 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getTokenFromRequest } from "@/lib/auth";
+import prisma from "@/lib/prisma";
+
+export async function GET(request: NextRequest) {
+  const payload = getTokenFromRequest(request);
+  if (!payload) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: { institutionId: true, verificationStatus: true },
+  });
+  if (!user || user.verificationStatus !== "APPROVED") return NextResponse.json([]);
+
+  const { searchParams } = new URL(request.url);
+  const topicId = searchParams.get("topicId");
+  const search = searchParams.get("search");
+  const verified = searchParams.get("verified");
+
+  const notes = await prisma.note.findMany({
+    where: {
+      author: { institutionId: user.institutionId || "" },
+      isPublic: true,
+      ...(topicId ? { topicId } : {}),
+      ...(verified ? { isVerified: true } : {}),
+      ...(search
+        ? {
+            OR: [
+              { title: { contains: search, mode: "insensitive" } },
+              { description: { contains: search, mode: "insensitive" } },
+              { tags: { has: search } },
+            ],
+          }
+        : {}),
+    },
+    include: {
+      author: { select: { name: true, role: true } },
+      topic: { include: { subject: { select: { name: true } } } },
+      _count: { select: { votes: true, comments: true, bookmarks: true } },
+    },
+    orderBy: [{ isVerified: "desc" }, { createdAt: "desc" }],
+    take: 30,
+  });
+
+  return NextResponse.json(notes.map((n) => ({ ...n, createdAt: n.createdAt.toISOString() })));
+}

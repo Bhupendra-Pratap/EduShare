@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum NoteType {
+  PDF
+  IMAGE
+  TEXT
+  LINK
+}
+
+model User {
+  id                 String             @id @default(cuid())
+  email              String             @unique
+  name               String
+  password           String
+  role               Role               @default(STUDENT)
+  avatar             String?
+  bio                String?
+  institutionId      String?
+  institution        Institution?       @relation(fields: [institutionId], references: [id])
+  departmentId       String?
+  department         Department?        @relation(fields: [departmentId], references: [id])
+  yearGroup          String?
+  verificationStatus VerificationStatus @default(PENDING)
+  idCardUrl          String?
+  isActive           Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  notes              Note[]
+  bookmarks          Bookmark[]
+  votes              Vote[]
+  verificationReqs   VerificationRequest[] @relation("UserVerifications")
+  reviewedVerifications VerificationRequest[] @relation("ReviewerVerifications")
+  adminOfInstitution Institution[]      @relation("InstitutionAdmin")
+  comments           Comment[]
+  noteRequests       NoteRequest[]
+
+  @@index([email])
+  @@index([institutionId])
+}
+
+model Institution {
+  id          String   @id @default(cuid())
+  name        String
+  code        String   @unique
+  description String?
+  logoUrl     String?
+  address     String?
+  website     String?
+  adminId     String?
+  admin       User?    @relation("InstitutionAdmin", fields: [adminId], references: [id])
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  departments Department[]
+  users       User[]
+  verificationRequests VerificationRequest[]
+
+  @@index([code])
+}
+
+model Department {
+  id            String   @id @default(cuid())
+  name          String
+  code          String
+  institutionId String
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  yearGroups YearGroup[]
+  users      User[]
+
+  @@unique([code, institutionId])
+}
+
+model YearGroup {
+  id           String   @id @default(cuid())
+  label        String
+  yearNumber   Int
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+
+  subjects Subject[]
+}
+
+model Subject {
+  id          String   @id @default(cuid())
+  name        String
+  code        String
+  description String?
+  yearGroupId String
+  yearGroup   YearGroup @relation(fields: [yearGroupId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  topics Topic[]
+  noteRequests NoteRequest[]
+}
+
+model Topic {
+  id        String   @id @default(cuid())
+  name      String
+  subjectId String
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  notes Note[]
+}
+
+model Note {
+  id              String   @id @default(cuid())
+  title           String
+  description     String?
+  content         String?
+  fileUrl         String?
+  fileType        NoteType @default(TEXT)
+  fileName        String?
+  fileSize        Int?
+  authorId        String
+  author          User     @relation(fields: [authorId], references: [id])
+  topicId         String
+  topic           Topic    @relation(fields: [topicId], references: [id])
+  isVerified      Boolean  @default(false)
+  verifiedById    String?
+  tags            String[]
+  viewCount       Int      @default(0)
+  downloadCount   Int      @default(0)
+  isPublic        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  bookmarks Bookmark[]
+  votes     Vote[]
+  comments  Comment[]
+
+  @@index([topicId])
+  @@index([authorId])
+}
+
+model VerificationRequest {
+  id            String             @id @default(cuid())
+  userId        String
+  user          User               @relation("UserVerifications", fields: [userId], references: [id])
+  institutionId String
+  institution   Institution        @relation(fields: [institutionId], references: [id])
+  idCardUrl     String
+  status        VerificationStatus @default(PENDING)
+  reviewedById  String?
+  reviewedBy    User?              @relation("ReviewerVerifications", fields: [reviewedById], references: [id])
+  rejectionReason String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([userId])
+  @@index([institutionId])
+  @@index([status])
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  noteId    String
+  note      Note     @relation(fields: [noteId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, noteId])
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  noteId    String
+  note      Note     @relation(fields: [noteId], references: [id])
+  value     Int      @default(1)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, noteId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  noteId    String
+  note      Note     @relation(fields: [noteId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([noteId])
+}
+
+model NoteRequest {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+  requesterId String
+  requester   User     @relation(fields: [requesterId], references: [id])
+  isFulfilled Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
