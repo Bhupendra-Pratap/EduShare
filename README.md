@@ -76,16 +76,7 @@ Open: http://localhost:3000
 
 ---
 
-## 🔑 Demo Accounts
 
-| Role        | Email                        | Password        |
-|-------------|------------------------------|-----------------|
-| Super Admin | superadmin@edushare.com      | superadmin123   |
-| Admin       | admin@iitd.ac.in             | admin123        |
-| Teacher     | prof.sharma@iitd.ac.in       | teacher123      |
-| Student     | student@iitd.ac.in           | student123      |
-
----
 
 ## 📁 Project Structure
 
