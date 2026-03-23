@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getTokenFromRequest } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
+import { v4 as uuidv4 } from "uuid";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -39,15 +40,23 @@ export async function POST(request: NextRequest) {
   if (file && file.size > 0) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const result = await new Promise((resolve, reject) => {
+
+    const isPdf = file.name.toLowerCase().endsWith(".pdf");
+    const resourceType = isPdf ? "raw" : "image";
+
+    const result = await new Promise<any>((resolve, reject) => {
       cloudinary.uploader
         .upload_stream(
-          { folder: "edushare/notes", resource_type: "auto" },
+          {
+            folder: "edushare/notes",
+            resource_type: resourceType,
+            public_id: uuidv4(),
+          },
           (err, result) => (err ? reject(err) : resolve(result))
         )
         .end(buffer);
     });
-    fileUrl = (result as any).secure_url;
+    fileUrl = result.secure_url;
     fileName = file.name;
     fileSize = file.size;
   } else if (linkUrl) {

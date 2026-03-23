@@ -122,13 +122,17 @@ export function NoteCard({ note, showActions = true }: NoteCardProps) {
             </button>
             {note.fileUrl && (
               <a
-                href={note.fileUrl}
+                href={
+                  note.fileType === "PDF" && note.fileUrl.includes("cloudinary")
+                    ? note.fileUrl.replace("/upload/", "/upload/fl_attachment/")
+                    : note.fileUrl
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-body font-medium text-ink-500 hover:bg-ink-100 transition-all"
               >
                 <Download className="w-3 h-3" />
-                {note.downloadCount}
+                {note.fileType === "PDF" ? "Open PDF" : "Download"}
               </a>
             )}
           </div>
